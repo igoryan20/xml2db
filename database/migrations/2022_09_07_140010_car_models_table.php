@@ -15,7 +15,7 @@ return new class extends Migration
     {
         Schema::create('car_models', function (Blueprint $table) {
             $table->id('model_id');
-            $table->string('mark', 64)->unique();
+            $table->string('mark', 64);
             $table->string('model', 64);
             $table->timestamps();
         });
