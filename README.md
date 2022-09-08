@@ -1,8 +1,7 @@
-#XML parser
+# XML parser
 
 Для запуска парсера смигрируйте БД
-<code>$ php artisan migrate</code>
+`$ php artisan migrate`
 
 Затем запустите
-<code> $ php artisan xml2db:send <xml-path></code>
-
+`$ php artisan xml2db:send <xml-path>`
