@@ -12,6 +12,8 @@ class CarModel extends Model
 
     public $table = 'car_models';
 
+    protected $primaryKey = 'model_id';
+
     public function generations(): HasMany
     {
         return $this->hasMany(CarGeneration::class);
@@ -19,6 +21,6 @@ class CarModel extends Model
 
     public function concreteCarCharacteristics(): HasMany
     {
-        return $this->hasMany(ConcreteCarCharacteristic::class);
+        return $this->hasMany(CarOffer::class);
     }
 }

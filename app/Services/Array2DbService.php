@@ -4,103 +4,92 @@ declare(strict_types=1);
 
 namespace App\Services;
 
-use App\Models\ConcreteCarCharacteristic;
+use App\Models\CarOffer;
 use App\Models\CarGeneration;
 use App\Models\CarModel;
-use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Validator;
 
 class Array2DbService
 {
-    private $allCars;
-    private array $updatedCarsId;
+    private Collection $allOffers;
+    private array $updatedOffersId;
 
     public function sendArray2Db(array $data)
     {
-        foreach ($data['offers'] as $offer) {
+        foreach ($data['offers'] as $offers) {
+            $this->sendOffers($offers);
+        }
+    }
+
+    private function sendOffers(array $offers)
+    {
+        $this->allOffers = CarOffer::all();
+        foreach ($offers as $offer) {
             $this->sendOffer($offer);
         }
+        $this->deleteNotUpdatedOffers();
     }
 
     private function sendOffer(array $offer)
     {
-        $this->allCars = ConcreteCarCharacteristic::all();
-        foreach ($offer as $concreteCar) {
-            $this->sendConcreteCar($concreteCar);
-        }
-        $this->deleteNotUpdatedCars();
-    }
-
-    private function sendConcreteCar(array $car)
-    {
-        $concreteCar = ConcreteCarCharacteristic::where('concrete_car_id', $car['id'])->first();
-        if ($concreteCar) {
-            $this->updatedCarsId[] = $car['id'];
-            $this->updateTables($car, $concreteCar);
+        $offerDb = CarOffer::where('offer_id', $offer['id'])->first();
+        if ($offerDb) {
+            $this->updatedOffersId[] = $offer['id'];
+            $this->updateTables($offer, $offerDb);
         } else {
-            $this->addToTables($car);
+            $this->addToTables($offer);
         }
     }
 
-    private function updateTables(array $car, $concreteCar)
+    private function updateTables(array $offer, $offerDb)
     {
-        DB::transaction(function () use ($car, $concreteCar) {
-
-            $concreteCar->year = $car['year'];
-            $concreteCar->run = $car['run'];
-            $concreteCar->color = $car['color'];
-            $concreteCar->body_type = $car['body-type'];
-            $concreteCar->engine_type = $car['engine-type'];
-            $concreteCar->transmission = $car['transmission'];
-            $concreteCar->gear_type = $car['gear-type'];
-            $concreteCar->generation_id = $car['generation_id'];
-
-            $carModel = $concreteCar->model;
-            $carModel->mark = $car['mark'];
-            $carModel->model = $car['model'];
-
+        DB::transaction(function () use ($offer, $offerDb) {
+            $offerDb->year = $offer['year'];
+            $offerDb->run = $offer['run'];
+            $offerDb->color = $offer['color'];
+            $offerDb->body_type = $offer['body-type'];
+            $offerDb->engine_type = $offer['engine-type'];
+            $offerDb->transmission = $offer['transmission'];
+            $offerDb->gear_type = $offer['gear-type'];
+            $offerDb->generation_id = $offer['generation_id'];
+            $carModel = CarModel::where('model_id', $offerDb->model_id)->first();
+            $carModel->mark = $offer['mark'];
+            $carModel->model = $offer['model'];
             $carModel->save();
-
-            if ($concreteCar->generation_id) {
-                $carGeneration = $concreteCar->generation;
-                $carGeneration->generation_id = $car['generation_id'];
-                $carGeneration->generation = $car['generation'];
-
+            if ($offerDb->generation_id) {
+                $carGeneration = CarGeneration::where('generation_id', $offerDb->generation_id)->first();
+                $carGeneration->generation_id = $offer['generation_id'];
+                $carGeneration->generation = $offer['generation'];
                 $carGeneration->save();
             }
-
-
-            $concreteCar->save();
+            $offerDb->save();
         });
     }
 
     private function addToTables(array $car)
     {
-        print_r($car);
-
         DB::transaction(function () use ($car) {
-            $carModel = new CarModel;
-            $carModel->mark = $car['mark'];
-            $carModel->model = $car['model'];
-
-            $carModel->save();
-
-            $concreteCar = new ConcreteCarCharacteristic;
-
+            $carModel = CarModel::where('mark', $car['mark'])->where('model', $car['model'])->first();
+            if (!$carModel) {
+                $carModel = new CarModel;
+                $carModel->mark = $car['mark'];
+                $carModel->model = $car['model'];
+                $carModel->save();
+            }
+            $concreteCar = new CarOffer;
             if ($car['generation_id']) {
-                $carGeneration = new CarGeneration;
-                $carGeneration->generation_id = $car['generation_id'];
-                $carGeneration->generation = $car['generation'];
-                $carGeneration->car_model_id = $carModel->id;
-
-                $carGeneration->save();
-
+                $carGeneration = CarGeneration::where('generation_id', $car['generation_id'])->first();
+                if (!$carGeneration) {
+                    $carGeneration = new CarGeneration;
+                    $carGeneration->generation_id = $car['generation_id'];
+                    $carGeneration->generation = $car['generation'];
+                    $carGeneration->model_id = $carModel->model_id;
+                    $carGeneration->save();
+                }
                 $concreteCar->generation_id = ($car['generation_id']);
             }
-
-
-            $concreteCar->concrete_car_id = $car['id'];
+            $concreteCar->offer_id = $car['id'];
             $concreteCar->year = $car['year'];
             $concreteCar->run = $car['run'];
             $concreteCar->color = $car['color'];
@@ -108,17 +97,32 @@ class Array2DbService
             $concreteCar->engine_type = $car['engine-type'];
             $concreteCar->transmission = $car['transmission'];
             $concreteCar->gear_type = $car['gear-type'];
-            $concreteCar->model_id = $carModel->id;
-
+            $concreteCar->model_id = $carModel->model_id;
             $concreteCar->save();
         });
     }
 
-    private function deleteNotUpdatedCars()
+    private function deleteNotUpdatedOffers()
     {
-        foreach ($this->allCars as $car) {
-            if (!in_array($car->characteristic_id, $this->updatedCarsId)) {
-                ConcreteCarCharacteristic::where('concrete_car_id', $car->characteristic_id)->delete();
+        foreach ($this->allOffers as $car) {
+            if (!in_array($car->offer_id, $this->updatedOffersId)) {
+                DB::transaction(function () use ($car) {
+                    $carOffers = CarOffer::where('model_id', $car->model_id)->get();
+                    $generation = null;
+                    if ($car->generation_id) {
+                        $generationOffers = CarOffer::where('generation_id', $car->generation_id)->get();
+                        if ($generationOffers->count() === 1) {
+                            $generation = CarGeneration::where('generation_id', $car->generation_id);
+                        }
+                    }
+                    CarOffer::where('offer_id', $car->offer_id)->delete();
+                    if ($generation) {
+                        $generation->delete();
+                    }
+                    if ($carOffers->count() === 1) {
+                        CarModel::where('model_id', $car->model_id)->delete();
+                    }
+                });
             }
         }
     }

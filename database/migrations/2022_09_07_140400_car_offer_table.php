@@ -13,17 +13,20 @@ return new class extends Migration
      */
     public function up()
     {
-        Schema::create('concrete_car_characteristics', function (Blueprint $table) {
-            $table->id('concrete_car_id');
+        Schema::create('car_offers', function (Blueprint $table) {
+            $table->id('offer_id');
             $table->year('year');
-            $table->integer('run');
-            $table->string('color');
+            $table->integer('run')->nullable();
+            $table->string('color')->nullable();
             $table->string('body_type');
             $table->string('engine_type');
             $table->string('transmission');
             $table->string('gear_type');
-            $table->foreignId('generation_id')->nullable();
-            $table->foreignId('model_id');
+            $table->bigInteger('generation_id')->nullable()->unsigned();
+            $table->bigInteger('model_id')->unsigned();
+
+            $table->foreign('generation_id')->references('generation_id')->on('car_generations');
+            $table->foreign('model_id')->references('model_id')->on('car_models');
 
             $table->timestamps();
         });
@@ -36,6 +39,6 @@ return new class extends Migration
      */
     public function down()
     {
-        Schema::dropIfExists('concrete_car_characteristics');
+        Schema::dropIfExists('car_offers');
     }
 };

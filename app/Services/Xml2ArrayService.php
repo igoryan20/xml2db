@@ -20,6 +20,24 @@ class Xml2ArrayService
         $simpleXml = simplexml_load_string($xmlFileContent);
         $jsonConverted = json_encode($simpleXml);
 
-        return json_decode($jsonConverted, true);
+        $xmlArray = json_decode($jsonConverted, true);
+
+        return $this->fieldArrayToNull($xmlArray);
+    }
+
+    private function fieldArrayToNull(array $xmlArray): array
+    {
+        foreach ($xmlArray['offers'] as $offer) {
+            foreach ($offer as $index => $car) {
+                foreach ($car as $field => $value)
+                {
+                    if (is_array($value)) {
+                        $xmlArray['offers']['offer'][$index][$field] = null;
+                    }
+                }
+            }
+        }
+
+        return $xmlArray;
     }
 }

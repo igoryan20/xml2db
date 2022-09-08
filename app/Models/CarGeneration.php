@@ -10,4 +10,6 @@ class CarGeneration extends Model
     use HasFactory;
 
     public $table = 'car_generations';
+
+    protected $primaryKey = 'generation_id';
 }

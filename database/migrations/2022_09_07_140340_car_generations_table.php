@@ -14,9 +14,12 @@ return new class extends Migration
     public function up()
     {
         Schema::create('car_generations', function (Blueprint $table) {
-            $table->integer('generation_id')->unique();
+            $table->id('generation_id');
             $table->string('generation', 64);
-            $table->foreignId('car_model_id');
+            $table->bigInteger('model_id')->unsigned();
+
+            $table->foreign('model_id')->references('model_id')->on('car_models');
+
             $table->timestamps();
         });
     }
